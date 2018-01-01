@@ -46,10 +46,13 @@
 #- THE ITEM NEEDS TO MATCH THE MARKER
 #- -r for random spot
 #- write how the options work -r for random, -c for commercial -rc (random and commercial, etc)
+#-  options are set in the markers, not the spot name
 #- how are random files to be named?  explain that here
 # - for imported audio that isn't random, the audio file must match the name of the marker/item
 
 #TODO:
+# - need to gracefully handle a spot-marker mismatch (name of spot doesn't exactly match
+#	associated marker)
 # - still need to figure out how commercials get brough in - are they recorded and then
 #	placed in the show folder - probably, because they can't go in the assets folder as
 #	that's used for all the shows being rendered
@@ -114,6 +117,7 @@ conSpotEndSnapOption = "e" #option for when a spot should be snapped to its end 
 conSpotRandomOption = "r" #option for when random files are to be used for a spot
 conAudioFolderName = "Audio" #name of folder where audio is stored in the script folder and project folder
 conRandomSpotsSrcFolder = "Random spots" #folder name where random spots are stored for each station
+conITEMProcessKeyword = "IMPORT " #lets  script know that marker/ITEM should be processed - include all whitespaces
 
 if not blnUseCLArgs:
 	print()
@@ -315,7 +319,7 @@ lstFailedStationRender = []
 shutil.rmtree(os.path.join(strProjectPath,"Audio\\Imported"),True)
 
 for strStation in lstStations:
-	print("Processing " + strStation + "...")
+	print("\nProcessing " + strStation + "...")
 
 	#find out how many random files there are for this station
 	if strStation != conProjectTemplate:
@@ -344,32 +348,43 @@ for strStation in lstStations:
 			#find the markers and save them in a dictionary
 			if conMarkerLabel.lower() in strLine.lower():
 				#the marker label was found, split it into a list
-				lstMarkerDetails = shlex.split(strLine)
 
-				#lstMarkerDetails has the following:
-				#	0:marker label, 1:id, 2:position, 3:marker name, ...other stuff I'm not using
-				if conMarkerOptionDesignator in lstMarkerDetails[3]:
-					#options have been found, let's save them and the marker name
-					strMarkerName = lstMarkerDetails[3].split("-")[0].lower()
-					strMarkerOptions = lstMarkerDetails[3].split("-")[1]
+				#let's check to see if it's associated with an importable spot
+				if "import" not in strLine.lower():
+					#this marker doesn't have the processing keyword so just write this line to the reaper file
+					fOutFile.write(strLine)
 				else:
-					#no options found, just save the marker name
-					strMarkerName = lstMarkerDetails[3].lower()
-					strMarkerOptions = ""
+					#this MARKER has the processing keyword so let's process it
+
+					#remove the ITEM processing keyword split marker into a list
+					lstMarkerDetails = shlex.split( strLine.lower().replace(conITEMProcessKeyword.lower(), "") )
+
+#					print(" Processing: \"%s\"" % lstMarkerDetails[3])
 					
-				#store position		
-				strMarkerPosition = lstMarkerDetails[2]
-				
-				#check for duplicate markers
-				if strMarkerName not in dictMarkers:
-					# this is not a duplicate - save the marker details to a dictionary
-					#	{"marker name":["marker position","marker options"]}
-					#	options currently are E=end snap, R=Random spot
-					dictMarkers[strMarkerName] = [strMarkerPosition,strMarkerOptions]
-				else:
-					print(" Duplicate marker found")
-					sys.exit()
-				fOutFile.write(strLine)
+					#lstMarkerDetails has the following:
+					#	0:marker label, 1:id, 2:position, 3:marker name, ...other stuff I'm not using
+					if conMarkerOptionDesignator in lstMarkerDetails[3]:
+						#options have been found, let's save them and the marker name
+						strMarkerName = lstMarkerDetails[3].split("-")[0].lower()
+						strMarkerOptions = lstMarkerDetails[3].split("-")[1]
+					else:
+						#no options found, just save the marker name
+						strMarkerName = lstMarkerDetails[3].lower()
+						strMarkerOptions = ""
+						
+					#store position		
+					strMarkerPosition = lstMarkerDetails[2]
+					
+					#check for duplicate markers
+					if strMarkerName not in dictMarkers:
+						# this is not a duplicate - save the marker details to a dictionary
+						#	{"marker name":["marker position","marker options"]}
+						#	options currently are E=end snap, R=Random spot
+						dictMarkers[strMarkerName] = [strMarkerPosition,strMarkerOptions]
+					else:
+						print(" Duplicate marker found")
+						sys.exit()
+					fOutFile.write(strLine.upper())
 
 			#update the render format with the one selected
 			elif conRenderConfigLabel.lower() in strLine.lower():
@@ -440,7 +455,7 @@ for strStation in lstStations:
 							print("ERROR: LENGTH element wasn't where it was expected to be!")
 							print("Found this instead:",lstItem[4])
 							sys.exit()
-						
+
 						if "name" in lstItem[13].lower():
 							strItemName = shlex.split(lstItem[13])[1].lower()
 						else:
@@ -455,160 +470,171 @@ for strStation in lstStations:
 							print("Found this instead:",lstItem[20])
 							sys.exit()
 
-#						print(" SPOT: %s" % strItemName)
-
-						#store this spot's associated marker options in a variable
-						strItemOptions = dictMarkers[strItemName][1].lower()
-#						print(" spot options:", strItemOptions)
-
-						if conSpotEndSnapOption in strItemOptions:
-							#this spot's position is snapped to the end of the spot
-#							print( " snapped to end of spot")
-							blnEndSnap = True
+						#let's check to see if this is an importable spot
+						if "import" not in strItemName.lower():
+							print(" Spot \"%s\" does not contain IMPORT - skipping" % strItemName)
 						else:
-							#this spot's position is snapped to the beginning of the spot
-#							print( " snapped to beginning of spot")
-							blnEndSnap = False
-						
-						#update the elements within this spot's ITEM block
-						if strStation != conProjectTemplate:
-							#check to make sure that this spots ITEM name has an associated marker
-							if strItemName.lower() not in dictMarkers.keys():
-								print(),print(" This spot (%s) does not have an associated marker" % strItemName)
-								sys.exit()
+							#this ITEM has the IMPORT keyword so let's process it
 
-							#update file location stored for this spot
-							if conSpotRandomOption in strItemOptions:
-								#this is a random spot
-								#check to make sure there are enough random files to match the number of spots
-								intRandomSpotCnt += 1
-								if intRandomSpotCnt > len(lstRandomWAVsFilenames):
-									print(" Not enough WAVs in the %s folder to fill all the spots.  Expecting at least %i spots" % (strStation,intRandomSpotCnt))
-									print()
-									sys.exit()
+							#check if item name exists in marker dictionary
 
-								#select a random spot but make sure it hasn't been used already
-								while True:
-									#random number needs to be offset by one because the list of random WAVs starts at 0
-									intFileNumber = random.randint(0,len(lstRandomWAVsFilenames)-1)
-									if intFileNumber not in lstRandomList:
-										lstRandomList.append(intFileNumber)
-										break
-								
-								#build the full path the selected random file
-								strWavSrcPath = os.path.join(strAssetsPath, "Audio", strStation, "Random spots",lstRandomWAVsFilenames[intFileNumber])
-								strWavSrcFolder = str(pathlib.Path(strWavSrcPath))
+######### todo check exist in marker ditionary
+							
+							#remove the item processing keyword
+							strItemName = strItemName.replace(conITEMProcessKeyword.lower(), "")
 
-								#verify that file has station name in it just to be sure we're not accidentally 
-								#pulling ling the wrong files
-								if (strStation + "-") not in os.path.basename(strWavSrcPath):
-									print(" \"%s\" needs to contain [station hypen] at the beginning of the filename" % os.path.basename(strWavSrcPath))
-									sys.exit()
-							else:
-								#this is general (non-random) spot
-								strWavSrcPath = os.path.join(strAssetsPath, "Audio", strStation, "General", strStation + "-" + strItemName + ".wav")
-								strWavSrcFolder = str(pathlib.Path(strWavSrcPath).parent)
+							#store this spot's associated marker options in a variable
+							strItemOptions = dictMarkers[strItemName][1].lower()
+	#						print(" spot options:", strItemOptions)
 
-							#build the path to where the audio assets will be copied
-							strWavDestPath = os.path.join(strProjectPath,"Audio\\Imported",strStation,os.path.basename(strWavSrcPath))
-							strWavDestFolder = str(pathlib.Path(strWavDestPath).parent)
-
-							lstItem[20] = " "*(intItemIndent+4) + "FILE \"" + strWavSrcPath + "\"\n"
-
-							#turn off looping as we don't want the spot to ever to loop if the length is wrong
-							lstItem[4] = " "*(intItemIndent+2) + "LOOP 0\n"
-
-							#update the length of the spot
-#							print("item length: %f" % fltItemLength)
-#							print("wav: %s" % strWavSrcPath)
-							with contextlib.closing(wave.open(strWavSrcPath,'r')) as f:
-								frames = f.getnframes()
-								rate = f.getframerate()
-								fltWAVDuration = round(frames / float(rate),14)
-
-							lstItem[3] = " "*(intItemIndent+2) + "LENGTH " + str(fltWAVDuration) + "\n"
-
-							#update the position of the spot
-							#check to make sure that the spot position is within a certain distance from the
-							#	position specified by the marker
-							if  blnEndSnap:
+							if conSpotEndSnapOption in strItemOptions:
 								#this spot's position is snapped to the end of the spot
-								fltItemPositionDiff = abs(float(dictMarkers[strItemName][0]) - fltItemPosition - fltItemLength)
+	#							print( " snapped to end of spot")
+								blnEndSnap = True
 							else:
 								#this spot's position is snapped to the beginning of the spot
-								fltItemPositionDiff = abs(float(dictMarkers[strItemName][0]) - fltItemPosition)
-	
-							#check that the position is within tolerance, and if so, use that position
-							if fltItemPositionDiff <= conSpotPositionTolerance:
-								#spot is within required distance from marker, so we'll use marker position:
+	#							print( " snapped to beginning of spot")
+								blnEndSnap = False
+							
+							#update the elements within this spot's ITEM block
+							if strStation != conProjectTemplate:
+								#check to make sure that this spots ITEM name has an associated marker
+								if strItemName.lower() not in dictMarkers.keys():
+									print(),print(" This spot (%s) does not have an associated marker" % strItemName)
+									sys.exit()
+
+								#update file location stored for this spot
+								if conSpotRandomOption in strItemOptions:
+									#this is a random spot
+									#check to make sure there are enough random files to match the number of spots
+									intRandomSpotCnt += 1
+									if intRandomSpotCnt > len(lstRandomWAVsFilenames):
+										print(" Not enough WAVs in the %s folder to fill all the spots.  Expecting at least %i spots" % (strStation,intRandomSpotCnt))
+										print()
+										sys.exit()
+
+									#select a random spot but make sure it hasn't been used already
+									while True:
+										#random number needs to be offset by one because the list of random WAVs starts at 0
+										intFileNumber = random.randint(0,len(lstRandomWAVsFilenames)-1)
+										if intFileNumber not in lstRandomList:
+											lstRandomList.append(intFileNumber)
+											break
+									
+									#build the full path the selected random file
+									strWavSrcPath = os.path.join(strAssetsPath, "Audio", strStation, "Random spots",lstRandomWAVsFilenames[intFileNumber])
+									strWavSrcFolder = str(pathlib.Path(strWavSrcPath))
+
+									#verify that file has station name in it just to be sure we're not accidentally 
+									#pulling ling the wrong files
+									if (strStation + "-") not in os.path.basename(strWavSrcPath):
+										print(" \"%s\" needs to contain [station hypen] at the beginning of the filename" % os.path.basename(strWavSrcPath))
+										sys.exit()
+								else:
+									#this is general (non-random) spot
+									strWavSrcPath = os.path.join(strAssetsPath, "Audio", strStation, "General", strStation + "-" + strItemName + ".wav")
+									strWavSrcFolder = str(pathlib.Path(strWavSrcPath).parent)
+
+								#build the path to where the audio assets will be copied
+								strWavDestPath = os.path.join(strProjectPath,"Audio\\Imported",strStation,os.path.basename(strWavSrcPath))
+								strWavDestFolder = str(pathlib.Path(strWavDestPath).parent)
+
+								lstItem[20] = " "*(intItemIndent+4) + "FILE \"" + strWavSrcPath + "\"\n"
+
+								#turn off looping as we don't want the spot to ever to loop if the length is wrong
+								lstItem[4] = " "*(intItemIndent+2) + "LOOP 0\n"
+
+								#update the length of the spot
+	#							print("item length: %f" % fltItemLength)
+	#							print("wav: %s" % strWavSrcPath)
+								with contextlib.closing(wave.open(strWavSrcPath,'r')) as f:
+									frames = f.getnframes()
+									rate = f.getframerate()
+									fltWAVDuration = round(frames / float(rate),14)
+
+								lstItem[3] = " "*(intItemIndent+2) + "LENGTH " + str(fltWAVDuration) + "\n"
+
+								#update the position of the spot
+								#check to make sure that the spot position is within a certain distance from the
+								#	position specified by the marker
+								if  blnEndSnap:
+									#this spot's position is snapped to the end of the spot
+									fltItemPositionDiff = abs(float(dictMarkers[strItemName][0]) - fltItemPosition - fltItemLength)
+								else:
+									#this spot's position is snapped to the beginning of the spot
+									fltItemPositionDiff = abs(float(dictMarkers[strItemName][0]) - fltItemPosition)
+		
+								#check that the position is within tolerance, and if so, use that position
+								if fltItemPositionDiff <= conSpotPositionTolerance:
+									#spot is within required distance from marker, so we'll use marker position:
+									if blnEndSnap:
+										#snapped to end of spot
+										fltNewItemPosition = float(dictMarkers[strItemName][0]) - fltWAVDuration
+									else:
+										#snapped to beginning of spot
+										fltNewItemPosition = float(dictMarkers[strItemName][0])
+								else:
+									print("\"%s\" is too far away from where its marker expected it to be (end snap = %s)" % (strItemName, blnEndSnap) )
+									print("Current location: %f\nMarker position: %s\nNew ITEM position based on WAV length: %f\nWAV length: %s\nDifference: %f\nPosition tolerance setting: %s" % (fltItemPosition, dictMarkers[strItemName][0], fltNewItemPosition, fltWAVDuration, fltItemPositionDiff, conSpotPositionTolerance) )
+
+									sys.exit()
+
+								print("\nITEM: %s (end snap: %s)\nLocation of beginning of ITEM: %f\nLocation of end of ITEM: %f\nMarker position: %s\nNew ITEM position based on WAV length: %f\nWAV length: %s\nDifference: %f\nPosition tolerance setting: %s" % (strItemName, blnEndSnap, fltItemPosition,fltItemPosition+fltItemLength, dictMarkers[strItemName][0], fltNewItemPosition, fltWAVDuration, fltItemPositionDiff, conSpotPositionTolerance) )
+
+
+
+								lstItem[1] = " "*(intItemIndent+2) + "POSITION " + str(fltNewItemPosition) + "\n"
+								
+	#							print(" using \"%s\"" % (os.path.basename(strWavSrcPath)))
+		
+								if blnRenderOn:
+									#rendering is enabled - check if destiniation folder exists
+									if not os.path.exists(strWavDestFolder):
+										os.makedirs(strWavDestFolder)
+			
+									if os.path.isfile(strWavSrcPath) and os.path.exists(strWavSrcPath):
+										if not os.path.exists(os.path.join(strProjectPath,"Audio\\Imported",strStation)):
+											print(" creating station folder in audio folder")
+											os.makedirs(os.path.join(strProjectPath,"Audio\\Imported",strStation))
+										shutil.copyfile(strWavSrcPath, strWavDestPath)
+									else:
+										print(" WARNING - file not found")
+										print(strWavSrcPath)
+										sys.exit()
+							else:	
+								#generating spots for new template
+								#update the position of the spot
 								if blnEndSnap:
 									#snapped to end of spot
-									fltNewItemPosition = float(dictMarkers[strItemName][0]) - fltWAVDuration
+									fltNewItemPosition = float(dictMarkers[strItemName.lower()][0]) - conTemplateDefaultSpotLength
 								else:
 									#snapped to beginning of spot
-									fltNewItemPosition = float(dictMarkers[strItemName][0])
-							else:
-								print("\"%s\" is too far away from where its marker expected it to be (end snap = %s)" % (strItemName, blnEndSnap) )
-								print("Current location: %f\nMarker position: %s\nNew ITEM position based on WAV length: %f\nWAV length: %s\nDifference: %f\nPosition tolerance setting: %s" % (fltItemPosition, dictMarkers[strItemName][0], fltNewItemPosition, fltWAVDuration, fltItemPositionDiff, conSpotPositionTolerance) )
+									fltNewItemPosition = float(dictMarkers[strItemName.lower()][0])
+								
+								#we're not going to do this any more because we want to keep the original template ITEM
+								# positions in place.
+								#lstItem[1] = " "*(intItemIndent+2) + "POSITION " + str(fltNewItemPosition) + "\n"
 
-								sys.exit()
+								#we're not going to do this any more because we want to keep the original template ITEM
+								# length in place.
+								#lstItem[3] = " "*(intItemIndent+2) + "LENGTH " + str(conTemplateDefaultSpotLength) + "\n"
+								
+								#turn on looping so that any length can be used for the silent wav
+								lstItem[4] = " "*(intItemIndent+2) + "LOOP 1\n"
 
-							print("\nITEM: %s (end snap: %s)\nLocation of beginning of ITEM: %f\nLocation of end of ITEM: %f\nMarker position: %s\nNew ITEM position based on WAV length: %f\nWAV length: %s\nDifference: %f\nPosition tolerance setting: %s" % (strItemName, blnEndSnap, fltItemPosition,fltItemPosition+fltItemLength, dictMarkers[strItemName][0], fltNewItemPosition, fltWAVDuration, fltItemPositionDiff, conSpotPositionTolerance) )
+								#we're not going to do this any more because we want to keep the original template ITEM
+								# filename in place.
+								#lstItem[20] = " "*(intItemIndent+4) + "FILE \"Audio\\Template\\" + conSilentWAVFilename + "\"\n"
 
+	#							#this is here because the template uses a different style assets source folder layout than the stations
+								strWavSrcPath = os.path.join(strAssetsPath, "Audio\\General", conSilentWAVFilename)
+								strWavSrcFolder = str(pathlib.Path(strWavSrcPath).parent)
+								strWavDestPath = os.path.join(strProjectPath,"Audio\\Template",os.path.basename(strWavSrcPath))
+								strWavDestFolder = str(pathlib.Path(strWavDestPath).parent)
 
-
-							lstItem[1] = " "*(intItemIndent+2) + "POSITION " + str(fltNewItemPosition) + "\n"
-							
-#							print(" using \"%s\"" % (os.path.basename(strWavSrcPath)))
-	
-							if blnRenderOn:
-								#rendering is enabled - check if destiniation folder exists
-								if not os.path.exists(strWavDestFolder):
-									os.makedirs(strWavDestFolder)
-		
-								if os.path.isfile(strWavSrcPath) and os.path.exists(strWavSrcPath):
-									if not os.path.exists(os.path.join(strProjectPath,"Audio\\Imported",strStation)):
-										print(" creating station folder in audio folder")
-										os.makedirs(os.path.join(strProjectPath,"Audio\\Imported",strStation))
-									shutil.copyfile(strWavSrcPath, strWavDestPath)
-								else:
-									print(" WARNING - file not found")
-									print(strWavSrcPath)
-									sys.exit()
-						else:	
-							#generating spots for new template
-							#update the position of the spot
-							if blnEndSnap:
-								#snapped to end of spot
-								fltNewItemPosition = float(dictMarkers[strItemName.lower()][0]) - conTemplateDefaultSpotLength
-							else:
-								#snapped to beginning of spot
-								fltNewItemPosition = float(dictMarkers[strItemName.lower()][0])
-							
-							#we're not going to do this any more because we want to keep the original template ITEM
-							# positions in place.
-							#lstItem[1] = " "*(intItemIndent+2) + "POSITION " + str(fltNewItemPosition) + "\n"
-
-							#we're not going to do this any more because we want to keep the original template ITEM
-							# length in place.
-							#lstItem[3] = " "*(intItemIndent+2) + "LENGTH " + str(conTemplateDefaultSpotLength) + "\n"
-							
-							#turn on looping so that any length can be used for the silent wav
-							lstItem[4] = " "*(intItemIndent+2) + "LOOP 1\n"
-
-							#we're not going to do this any more because we want to keep the original template ITEM
-							# filename in place.
-							#lstItem[20] = " "*(intItemIndent+4) + "FILE \"Audio\\Template\\" + conSilentWAVFilename + "\"\n"
-
-#							#this is here because the template uses a different style assets source folder layout than the stations
-							strWavSrcPath = os.path.join(strAssetsPath, "Audio\\General", conSilentWAVFilename)
-							strWavSrcFolder = str(pathlib.Path(strWavSrcPath).parent)
-							strWavDestPath = os.path.join(strProjectPath,"Audio\\Template",os.path.basename(strWavSrcPath))
-							strWavDestFolder = str(pathlib.Path(strWavDestPath).parent)
-
-						#commit all the changes made above
-						for strEntry in lstItem:
-							fOutFile.write(strEntry)
+							#commit all the changes made above
+							for strEntry in lstItem:
+								fOutFile.write(strEntry)
 			else:
 				print("I'm not sure how I got here - figure it out!")
 				sys.exit()
