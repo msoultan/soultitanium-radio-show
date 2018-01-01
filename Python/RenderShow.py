@@ -24,6 +24,7 @@
 #****************************************************************************************
 #
 #v1.0 - Initial release (ported from vbScript)
+#v1.1 - Updated documentation and how it finds spots to import
 #
 #
 #This script is used to render the Soul-Titanium radio show for multiple radio stations.
