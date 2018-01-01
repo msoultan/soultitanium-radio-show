@@ -44,10 +44,7 @@
 #INSTRUCTIONS
 #- USING "IMPORT" MATCHING TO FIGURE OUT WHICH SPOTS TO IMPORT
 #- THE ITEM NEEDS TO MATCH THE MARKER
-#- -r for random spot
-#- write how the options work -r for random, -c for commercial -rc (random and commercial, etc)
-#- how are random files to be named?  explain that here
-# - for imported audio that isn't random, the audio file must match the name of the marker/item
+
 
 #TODO:
 # - still need to figure out how commercials get brough in - are they recorded and then
@@ -136,9 +133,8 @@ objCLParser.add_argument("--norender", required=False, action="store_true", help
 if blnUseCLArgs:
 	objCLArgs = objCLParser.parse_args()
 else:
-	objCLArgs = objCLParser.parse_args(["--projectpath", "C:\\Users\\mike\\Documents\\REAPER Media\\Soul-Titanium\\show xx - DEV TEMPLATE (v3)\\Show",
+	objCLArgs = objCLParser.parse_args(["--projectpath", "C:\\Users\\mike\\Documents\\REAPER Media\\Soul-Titanium\\show xx - DEV TEMPLATE\\Show",
 									"--renderpath", "C:\\Users\\mike\\Documents\\REAPER Media\\Soul-Titanium",
-									"--assetspath", "C:\\Users\\mike\\Documents\\REAPER Media\\Soul-Titanium\\Show Assets",
 									"--stations", "KtKE   ,    KKJZ   ,Web    ",
 									"--scriptversion", "3",
 									"--projectfile", "show-master-template.RPP",
@@ -161,8 +157,7 @@ else:
 	blnRenderOn = True
 
 strProjectPath = objCLArgs.projectpath
-strRenderOutputPath = objCLArgs.renderpath
-strAssetsPath = objCLArgs.assetspath
+RenderOutputPath = objCLArgs.renderpath
 
 #check if the project folder exists
 if os.path.exists(strProjectPath):
@@ -172,10 +167,10 @@ else:
 	sys.exit()
 
 #check if the render output folder exists
-if os.path.exists(strRenderOutputPath):
-	print("Render output folder:\n", strRenderOutputPath)
+if os.path.exists(RenderOutputPath):
+	print("Render output folder:\n", RenderOutputPath)
 else:
-	print("Render output folder specified does not exist:\n", strRenderOutputPath)
+	print("Render output folder specified does not exist:\n", RenderOutputPath)
 	sys.exit()
 
 #clean up the station list provided by the batch file
@@ -321,7 +316,7 @@ for strStation in lstStations:
 	if strStation != conProjectTemplate:
 		#finding random files for the stations, but not the template
 		
-		strStationRandomWAVPath = os.path.join(strAssetsPath, conAudioFolderName, strStation, conRandomSpotsSrcFolder)
+		strStationRandomWAVPath = os.path.join(strScriptPath, conAudioFolderName, strStation, conRandomSpotsSrcFolder)
 #		print(" Random wav folder:\n",strStationRandomWAVPath)
 		#check if the random wav folder exists
 		if not os.path.exists(strStationRandomWAVPath):
@@ -380,7 +375,7 @@ for strStation in lstStations:
 
 			#update the rendered file name
 			elif conRenderFilePrefix.lower().strip() in strLine.lower():
-				fOutFile.write(conRenderFilePrefix + "\"" + os.path.join(strRenderOutputPath, "show-" + strShowNumber + "-" + strStation + strRenderExt) + "\"\n")
+				fOutFile.write(conRenderFilePrefix + "\"" + os.path.join(RenderOutputPath, "show-" + strShowNumber + "-" + strStation + strRenderExt) + "\"\n")
 			
 			#search for the Station VT track
 			elif strTrackNameToFind.lower() not in strLine.lower():
@@ -496,7 +491,7 @@ for strStation in lstStations:
 										break
 								
 								#build the full path the selected random file
-								strWavSrcPath = os.path.join(strAssetsPath, "Audio", strStation, "Random spots",lstRandomWAVsFilenames[intFileNumber])
+								strWavSrcPath = os.path.join(strScriptPath, "Audio", strStation, "Random spots",lstRandomWAVsFilenames[intFileNumber])
 								strWavSrcFolder = str(pathlib.Path(strWavSrcPath))
 
 								#verify that file has station name in it just to be sure we're not accidentally 
@@ -506,10 +501,9 @@ for strStation in lstStations:
 									sys.exit()
 							else:
 								#this is general (non-random) spot
-								strWavSrcPath = os.path.join(strAssetsPath, "Audio", strStation, "General", strStation + "-" + strItemName + ".wav")
+								strWavSrcPath = os.path.join(strScriptPath, "Audio", strStation, "General", strStation + "-" + strItemName + ".wav")
 								strWavSrcFolder = str(pathlib.Path(strWavSrcPath).parent)
 
-							#build the path to where the audio assets will be copied
 							strWavDestPath = os.path.join(strProjectPath,"Audio\\Imported",strStation,os.path.basename(strWavSrcPath))
 							strWavDestFolder = str(pathlib.Path(strWavDestPath).parent)
 
@@ -600,8 +594,8 @@ for strStation in lstStations:
 							# filename in place.
 							#lstItem[20] = " "*(intItemIndent+4) + "FILE \"Audio\\Template\\" + conSilentWAVFilename + "\"\n"
 
-#							#this is here because the template uses a different style assets source folder layout than the stations
-							strWavSrcPath = os.path.join(strAssetsPath, "Audio\\General", conSilentWAVFilename)
+#							NOT SURE WHY THIS IS HERE - MIGHT NOT BE NEEDED
+							strWavSrcPath = os.path.join(strScriptPath, "Audio\\General", conSilentWAVFilename)
 							strWavSrcFolder = str(pathlib.Path(strWavSrcPath).parent)
 							strWavDestPath = os.path.join(strProjectPath,"Audio\\Template",os.path.basename(strWavSrcPath))
 							strWavDestFolder = str(pathlib.Path(strWavDestPath).parent)
@@ -617,7 +611,7 @@ for strStation in lstStations:
 
 	if strStation != conProjectTemplate:
 		try:
-			os.remove(os.path.join(strRenderOutputPath, "show-" + strShowNumber + "-" + strStation + strRenderExt))
+			os.remove(os.path.join(RenderOutputPath, "show-" + strShowNumber + "-" + strStation + strRenderExt))
 		except OSError:
 			pass
 
@@ -639,12 +633,12 @@ for strStation in lstStations:
 				break
 
 			#check to see if the MP3 rendered correctly
-			if os.path.exists(os.path.join(strRenderOutputPath, "show-" + strShowNumber + "-" + strStation + strRenderExt)):
+			if os.path.exists(os.path.join(RenderOutputPath, "show-" + strShowNumber + "-" + strStation + strRenderExt)):
 				#file was rendered, tag it if it's an mp3
 				if blnRenderMP3:
 					#apply ID3 tag to newly created MP3
 					print(" tagging MP3")
-					subprocess.call("\"" + os.path.join(strScriptPath, "id3.exe") + "\" -12 -v -t \"Soul-Titanium Radio Show " + strShowNumber + " - " + strDJName.title() + "\" -a \"Mike Soultanian\" -g \"House\" \"" + os.path.join(strRenderOutputPath, "show-" + strShowNumber + "-" + strStation + strRenderExt) + "\"")
+					subprocess.call("\"" + os.path.join(strScriptPath, "id3.exe") + "\" -12 -v -t \"Soul-Titanium Radio Show " + strShowNumber + " - " + strDJName.title() + "\" -a \"Mike Soultanian\" -g \"House\" \"" + os.path.join(RenderOutputPath, "show-" + strShowNumber + "-" + strStation + strRenderExt) + "\"")
 
 				print(" done!")
 				intRenderSuccessCnt += 1
