@@ -78,6 +78,10 @@
 #   to process an ITEM - does it need an associated marker, is there a keyword it's
 #   looking for, etc?  Right now I keep forgetting and I have to read the code to
 #   figure out what I did.
+# - currently script copies all the spots from the assets folder to the project folder
+#	and I'm guessing that's good because you want to keep whatever assets were used.  Now
+#	if you render a replay, you'll want to probably copy new assets as the station might
+#	have made changes to their stuff... this will be interesting how to handle replays
 
 
 
@@ -105,7 +109,7 @@ RenderWAV = 2
 conRenderFilePrefix = "  RENDER_FILE "
 conMarkerLabel = "MARKER"
 conRenderConfigLabel = "RENDER_CFG"
-RenderCfgMP3 = "    bDNwbQABAAABAAAA//////////8EAAAAAAEAAAAAAAA="
+RenderCfgMP3 = "    bDNwbUABAAABAAAABQAAAP////8EAAAAQAEAAAAAAAA="
 RenderCfgWAV = "    ZXZhdxAA"
 strTrackNameToFind = "Station VT"
 conMarkerOptionDesignator = "-"
@@ -539,7 +543,7 @@ for strStation in lstStations:
 								strWavDestPath = os.path.join(strProjectPath,"Audio\\Imported",strStation,os.path.basename(strWavSrcPath))
 								strWavDestFolder = str(pathlib.Path(strWavDestPath).parent)
 
-								lstItem[20] = " "*(intItemIndent+4) + "FILE \"" + strWavSrcPath + "\"\n"
+								lstItem[20] = " "*(intItemIndent+4) + "FILE \"" + strWavDestPath + "\"\n"
 
 								#turn off looping as we don't want the spot to ever to loop if the length is wrong
 								lstItem[4] = " "*(intItemIndent+2) + "LOOP 0\n"
@@ -588,7 +592,7 @@ for strStation in lstStations:
 	#							print(" using \"%s\"" % (os.path.basename(strWavSrcPath)))
 		
 								if blnRenderOn:
-									#rendering is enabled - check if destiniation folder exists
+									#rendering is enabled - check if destination folder exists
 									if not os.path.exists(strWavDestFolder):
 										os.makedirs(strWavDestFolder)
 			
