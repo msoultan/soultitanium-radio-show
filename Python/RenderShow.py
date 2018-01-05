@@ -51,6 +51,13 @@
 # - for imported audio that isn't random, the audio file must match the name of the marker/item
 
 #TODO:
+# - reset zoom and move cursor to the beginning for the rendered output files
+# - for the template that's generated every time, reset the markers back to their original
+#	which is where the items are (because I'm not moving them)
+# - need to figure out what to do if assets are repeatedly copied when the script is done - should
+#	the script delete the contents, or is that going to break what was in the original render.
+#	Need to be careful here...
+# - notify user if and IMPORT spot's associated marker isn't found (stop script?)
 # - need to gracefully handle a spot-marker mismatch (name of spot doesn't exactly match
 #	associated marker)
 # - still need to figure out how commercials get brough in - are they recorded and then
@@ -558,53 +565,63 @@ for strStation in lstStations:
 
 								lstItem[3] = " "*(intItemIndent+2) + "LENGTH " + str(fltWAVDuration) + "\n"
 
-								#update the position of the spot
-								#check to make sure that the spot position is within a certain distance from the
-								#	position specified by the marker
-								if  blnEndSnap:
-									#this spot's position is snapped to the end of the spot
-									fltItemPositionDiff = abs(float(dictMarkers[strItemName][0]) - fltItemPosition - fltItemLength)
+#								Gonna get rid of this and just place the item where the marker is								
+#								
+#								#update the position of the spot
+#								#check to make sure that the spot position is within a certain distance from the
+#								#	position specified by the marker
+#								if  blnEndSnap:
+#									#this spot's position is snapped to the end of the spot
+#									fltItemPositionDiff = abs(float(dictMarkers[strItemName][0]) - fltItemPosition - fltItemLength)
+#								else:
+#									#this spot's position is snapped to the beginning of the spot
+#									fltItemPositionDiff = abs(float(dictMarkers[strItemName][0]) - fltItemPosition)
+#		
+#								#check that the position is within tolerance, and if so, use that position
+#								if fltItemPositionDiff <= conSpotPositionTolerance:
+#									#spot is within required distance from marker, so we'll use marker position:
+#									if blnEndSnap:
+#										#snapped to end of spot
+#										fltNewItemPosition = float(dictMarkers[strItemName][0]) - fltWAVDuration
+#									else:
+#										#snapped to beginning of spot
+#										fltNewItemPosition = float(dictMarkers[strItemName][0])
+#								else:
+#									print("\"%s\" is too far away from where its marker expected it to be (end snap = %s)" % (strItemName, blnEndSnap) )
+#									print("Current location: %f\nMarker position: %s\nNew ITEM position based on WAV length: %f\nWAV length: %s\nDifference: %f\nPosition tolerance setting: %s" % (fltItemPosition, dictMarkers[strItemName][0], fltNewItemPosition, fltWAVDuration, fltItemPositionDiff, conSpotPositionTolerance) )
+#
+#									sys.exit()
+#
+#								print("\nITEM: %s (end snap: %s)\nLocation of beginning of ITEM: %f\nLocation of end of ITEM: %f\nMarker position: %s\nNew ITEM position based on WAV length: %f\nWAV length: %s\nDifference: %f\nPosition tolerance setting: %s" % (strItemName, blnEndSnap, fltItemPosition,fltItemPosition+fltItemLength, dictMarkers[strItemName][0], fltNewItemPosition, fltWAVDuration, fltItemPositionDiff, conSpotPositionTolerance) )
+
+
+								if blnEndSnap:
+									#snapped to end of spot
+									fltNewItemPosition = float(dictMarkers[strItemName][0]) - fltWAVDuration
 								else:
-									#this spot's position is snapped to the beginning of the spot
-									fltItemPositionDiff = abs(float(dictMarkers[strItemName][0]) - fltItemPosition)
-		
-								#check that the position is within tolerance, and if so, use that position
-								if fltItemPositionDiff <= conSpotPositionTolerance:
-									#spot is within required distance from marker, so we'll use marker position:
-									if blnEndSnap:
-										#snapped to end of spot
-										fltNewItemPosition = float(dictMarkers[strItemName][0]) - fltWAVDuration
-									else:
-										#snapped to beginning of spot
-										fltNewItemPosition = float(dictMarkers[strItemName][0])
-								else:
-									print("\"%s\" is too far away from where its marker expected it to be (end snap = %s)" % (strItemName, blnEndSnap) )
-									print("Current location: %f\nMarker position: %s\nNew ITEM position based on WAV length: %f\nWAV length: %s\nDifference: %f\nPosition tolerance setting: %s" % (fltItemPosition, dictMarkers[strItemName][0], fltNewItemPosition, fltWAVDuration, fltItemPositionDiff, conSpotPositionTolerance) )
-
-									sys.exit()
-
-								print("\nITEM: %s (end snap: %s)\nLocation of beginning of ITEM: %f\nLocation of end of ITEM: %f\nMarker position: %s\nNew ITEM position based on WAV length: %f\nWAV length: %s\nDifference: %f\nPosition tolerance setting: %s" % (strItemName, blnEndSnap, fltItemPosition,fltItemPosition+fltItemLength, dictMarkers[strItemName][0], fltNewItemPosition, fltWAVDuration, fltItemPositionDiff, conSpotPositionTolerance) )
-
-
+									#snapped to beginning of spot
+									fltNewItemPosition = float(dictMarkers[strItemName][0])
 
 								lstItem[1] = " "*(intItemIndent+2) + "POSITION " + str(fltNewItemPosition) + "\n"
 								
 	#							print(" using \"%s\"" % (os.path.basename(strWavSrcPath)))
 		
-								if blnRenderOn:
-									#rendering is enabled - check if destination folder exists
-									if not os.path.exists(strWavDestFolder):
-										os.makedirs(strWavDestFolder)
-			
-									if os.path.isfile(strWavSrcPath) and os.path.exists(strWavSrcPath):
-										if not os.path.exists(os.path.join(strProjectPath,"Audio\\Imported",strStation)):
-											print(" creating station folder in audio folder")
-											os.makedirs(os.path.join(strProjectPath,"Audio\\Imported",strStation))
-										shutil.copyfile(strWavSrcPath, strWavDestPath)
-									else:
-										print(" WARNING - file not found")
-										print(strWavSrcPath)
-										sys.exit()
+#		getting rid of this - always copying						if blnRenderOn:
+#									#rendering is enabled - check if destination folder exists
+
+								if not os.path.exists(strWavDestFolder):
+									os.makedirs(strWavDestFolder)
+		
+								if os.path.isfile(strWavSrcPath) and os.path.exists(strWavSrcPath):
+									if not os.path.exists(os.path.join(strProjectPath,"Audio\\Imported",strStation)):
+										print(" creating station folder in audio folder")
+										os.makedirs(os.path.join(strProjectPath,"Audio\\Imported",strStation))
+									shutil.copyfile(strWavSrcPath, strWavDestPath)
+								else:
+									print(" WARNING - file not found")
+									print(strWavSrcPath)
+									sys.exit()
+
 							else:	
 								#generating spots for new template
 								#update the position of the spot
