@@ -46,12 +46,17 @@
 #- THE ITEM NEEDS TO MATCH THE MARKER
 #- -r for random spot
 #- write how the options work -r for random, -c for commercial -rc (random and commercial, etc)
-#-  options are set in the markers, not the spot name
 #- how are random files to be named?  explain that here
-# - for imported audio that isn't random, the audio file must match the name of the marker/item
+# - for imported audio that isn't random, the audio file must match the name of the marker/item except for IMPORT prefix and options
+
+#confirmed instructions
+# - moving markers will update the positions of processed spots
+# - options are set in the markers, not the spot name
+# - marker name must match the item, except for the item name - that shouldn't include options
 
 #TODO:
-# - reset zoom and move cursor to the beginning for the rendered output files
+# - maybe make the IMPORT an option?  -I?
+# - make commercials station-specific (and maybe have global ones, too?)
 # - for the template that's generated every time, reset the markers back to their original
 #	which is where the items are (because I'm not moving them)
 # - need to figure out what to do if assets are repeatedly copied when the script is done - should
@@ -129,6 +134,10 @@ conSpotRandomOption = "r" #option for when random files are to be used for a spo
 conAudioFolderName = "Audio" #name of folder where audio is stored in the script folder and project folder
 conRandomSpotsSrcFolder = "Random spots" #folder name where random spots are stored for each station
 conITEMProcessKeyword = "IMPORT " #lets  script know that marker/ITEM should be processed - include all whitespaces
+conCursorLabel =  "  CURSOR"
+conDefaultCursorValue = "  CURSOR 0"
+conZoomLabel = "  ZOOM"
+conDefaultZoomValue = "  ZOOM 0.13521563292539 0 0"
 
 if not blnUseCLArgs:
 	print()
@@ -403,6 +412,14 @@ for strStation in lstStations:
 				fOutFile.write(strRenderCfg + "\n")
 				#this if is writing two lines to the project file so we'll advance the input project file pointer as well
 				next(fShowTemplate)
+
+			#reset the cursor position
+			elif conCursorLabel.lower() in strLine.lower():
+				fOutFile.write(conDefaultCursorValue + "\n")
+
+			#reset the zoom
+			elif conZoomLabel.lower() in strLine.lower():
+				fOutFile.write(conDefaultZoomValue + "\n")
 
 			#update the rendered file name
 			elif conRenderFilePrefix.lower().strip() in strLine.lower():
@@ -698,7 +715,7 @@ for strStation in lstStations:
 				break
 			else:
 				print(" This station's MP3 did not render correctly, trying again...")
-				winsound.Beep(1000, 1000)
+#				winsound.Beep(1000, 1000)
 				intRenderFailureCnt += 1
 				if strStation not in lstFailedStationRender:
 					lstFailedStationRender.append(strStation)
