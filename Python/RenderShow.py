@@ -55,45 +55,65 @@
 # - marker name must match the item, except for the item name - that shouldn't include options
 
 #TODO:
-# - maybe make the IMPORT an option?  -I?
-# - make commercials station-specific (and maybe have global ones, too?)
-# - for the template that's generated every time, reset the markers back to their original
-#	which is where the items are (because I'm not moving them)
-# - need to figure out what to do if assets are repeatedly copied when the script is done - should
-#	the script delete the contents, or is that going to break what was in the original render.
-#	Need to be careful here...
-# - notify user if and IMPORT spot's associated marker isn't found (stop script?)
+# MARKERS/ITEMS
 # - need to gracefully handle a spot-marker mismatch (name of spot doesn't exactly match
 #	associated marker)
-# - still need to figure out how commercials get brough in - are they recorded and then
-#	placed in the show folder - probably, because they can't go in the assets folder as
-#	that's used for all the shows being rendered
+# - notify user if an IMPORT spot's associated marker isn't found (stop script?)
 # - make it so when it's parsing through ITEMs that it finds the associated marker (or
 #	works the other way around and finds the ITEM associated with a marker), and then
 #	uses the time specified in the marker to move the ITEM to where it needs to go.  If
 #	it doesn't find the marker/ITEM match, it generates an error
 # - might be related to the above - don't use the tolerance, instead match the marker
-#	 name to the ITEM
+#	name to the ITEM
+# - notify user if an IMPORT spot's associated marker isn't found (stop script?)
 # - think about adding a processing indicator to the name of the marker and ITEM so the
 #   script knows whether it should process or ignore an item
-# - make "norender" option something that's selectable instead of having to put it in
-#	the batch file
-# - need to create two rendermodes - initial and replay - this way the initial mode
-#	will include commercials and the replay mode will ignore commercials
 # - need to create additional markers for commercials that are only included for
 #	the initial render mode
+# - for the template that's generated every time, reset the markers back to their original
+#	which is where the items are (because I'm not moving them)
 # - will need to create special tags so that the system knows that the marker is a
 #	commercial and not a regular spot
-# - clean up the paths because lots are hard-coded
-# - document the purpose for the tolerance - decide if it's actually needed
+#
+# OPTIONS
+# - maybe make the IMPORT an option?  -I?
+# - make commercials station-specific (and maybe have global ones, too?)
+#
+# INSTRUCTIONS
 # - Update instructions as I keep forgetting how the script knows when it's supposed
 #   to process an ITEM - does it need an associated marker, is there a keyword it's
 #   looking for, etc?  Right now I keep forgetting and I have to read the code to
 #   figure out what I did.
+# - document the purpose for the tolerance - decide if it's actually needed
+
+
+# SCRIPING
+# - do I allow -c commercial spots on all tracks?
+# - commercials should probably be pulled from a separate folder in the show folder, not the
+#	assets folder, and if there's no commercial, nothing is pulled.  This way I can easily
+#	do station-specific commercials
+# - might want to add global spots (for podcast announcements and stuff like that) instead
+# 	of recording that stuff repeatedly in the dj-specific track - this could be on the Web one
+#	or do all the stations hear about podcast stuff?  Might be weird...
 # - currently script copies all the spots from the assets folder to the project folder
 #	and I'm guessing that's good because you want to keep whatever assets were used.  Now
 #	if you render a replay, you'll want to probably copy new assets as the station might
 #	have made changes to their stuff... this will be interesting how to handle replays
+# - need to figure out what to do if assets are repeatedly copied when the script is done - should
+#	the script delete the contents, or is that going to break what was in the original render.
+#	Need to be careful here...
+# - still need to figure out how commercials get brought in - are they recorded and then
+#	placed in the show folder - probably, because they can't go in the assets folder as
+#	those are used for all the shows being rendered
+# - make "norender" option something that's selectable instead of having to put it in
+#	the batch file
+# - need to create two rendermodes - initial and replay - this way the initial mode
+#	will include commercials and the replay mode will ignore commercials
+# - clean up the paths because lots are hard-coded
+# - do I include station-specific ads that aren't specific to the DJ, and also shouldn't be
+#	included in the replay?  This would probably mean I need an additional track, or I guess
+#	those ads could go on the station track..... unless they're station-specific - that might
+#	get a little tricky.
 
 
 
