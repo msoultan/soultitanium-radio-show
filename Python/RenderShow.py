@@ -48,6 +48,7 @@
 #- write how the options work -r for random, -c for commercial -rc (random and commercial, etc)
 #- how are random files to be named?  explain that here
 # - for imported audio that isn't random, the audio file must match the name of the marker/item except for IMPORT prefix and options
+# - script should always re-import the drops as they might change based on shows that move
 
 #confirmed instructions
 # - moving markers will update the positions of processed spots
@@ -56,6 +57,17 @@
 
 #TODO:
 # MARKERS/ITEMS
+# - dont' hard-code the positions of the elements within the ITEM, instead loop through
+#	the item, check each element against a list of elements I'm looking for, note when
+#	the elements are found, and then use that as the index number to access those elements
+#	elsewhere in the code following.  That way the script can gracefully handle changes
+#	to the element structure if/when it changes as it seems likely to always be dynamic
+# - lock the rendered tracks except for the template - this way they can't be moved when
+#	demoing the show before rendering because sometimes I forget I'm not in the template.
+#	What I need to figure out is if it's ok to put a lock 1 following a lock 0, or do I
+#	need to remove a lock 0 if it's already there - but it seems like it only puts lock 1
+#	in there otherwise there is no lock element in the ITEM
+# - do we lock all items on all tracks?  maybe even lock tracks if it's possible?
 # - need to gracefully handle a spot-marker mismatch (name of spot doesn't exactly match
 #	associated marker)
 # - notify user if an IMPORT spot's associated marker isn't found (stop script?)
@@ -88,6 +100,9 @@
 
 
 # SCRIPING
+# - add an option to specify the date so that the filename has the release date - or have the
+#	actual air date in the file name?  But then I need to have a lookup file with all the dates
+#	so that might get tedious...
 # - do I allow -c commercial spots on all tracks?
 # - commercials should probably be pulled from a separate folder in the show folder, not the
 #	assets folder, and if there's no commercial, nothing is pulled.  This way I can easily
@@ -158,6 +173,8 @@ conCursorLabel =  "  CURSOR"
 conDefaultCursorValue = "  CURSOR 0"
 conZoomLabel = "  ZOOM"
 conDefaultZoomValue = "  ZOOM 0.13521563292539 0 0"
+conVzoomexLabel = "  VZOOMEX"
+conDefaultVzoomexValue = "  VZOOMEX 8"
 
 if not blnUseCLArgs:
 	print()
@@ -441,6 +458,10 @@ for strStation in lstStations:
 			elif conZoomLabel.lower() in strLine.lower():
 				fOutFile.write(conDefaultZoomValue + "\n")
 
+			#reset the vertical zoom
+			elif conVzoomexLabel.lower() in strLine.lower():
+				fOutFile.write(conDefaultVzoomexValue + "\n")
+				
 			#update the rendered file name
 			elif conRenderFilePrefix.lower().strip() in strLine.lower():
 				fOutFile.write(conRenderFilePrefix + "\"" + os.path.join(strRenderOutputPath, "show-" + strShowNumber + "-" + strStation + strRenderExt) + "\"\n")
@@ -471,13 +492,35 @@ for strStation in lstStations:
 						lstItem.append(strLine)
 						
 						#step through all the elements in the ITEM and put them in a list
+						intElementCount = 0
 						for strLine in fShowTemplate:
 #							print("%s" % strLine,end="")
 							lstItem.append(strLine)
+							intElementCount = intElementCount + 1
 							if ">" in strLine and (len(strLine) - len(strLine.lstrip())) == intItemIndent:
 								#end of the ITEM
 								break
-					
+
+
+
+
+#gotta figure out where to put this lock code and do it cleanly
+#								#let's lock all the station template spots
+#								lstItem.append(" "*(intItemIndent+2) + "LOCK 1\n")
+
+
+
+
+
+
+
+
+
+
+
+
+
+								
 						#now check to make sure all elements are where we expect them to be as a new
 						#	version of Reaper might change how ITEM elements are ordered.
 						#lstItem reference:
@@ -658,7 +701,7 @@ for strStation in lstStations:
 									print(" WARNING - file not found")
 									print(strWavSrcPath)
 									sys.exit()
-
+									
 							else:	
 								#generating spots for new template
 								#update the position of the spot
